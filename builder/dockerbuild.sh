@@ -5,22 +5,9 @@ set -x
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -c|--check-changelog)
-      CHECK_CHANGELOG=YES
-      shift
-      ;;
     -a|--architecture)
       ARCH_ASK="$2"
       shift
-      shift
-      ;;
-    -t|--targets)
-      TARGETS="$2"
-      shift
-      shift
-      ;;
-    -r|--commit-versioning)
-      COMMIT_VERSIONING=YES
       shift
       ;;
     -o|--operating-systems)
@@ -28,29 +15,20 @@ while [[ $# -gt 0 ]]; do
       shift
       shift
       ;;
-	--ast-ver)
-      AST_VER="$2"
-      shift
-	  shift
-      ;;
-	--rpt-ver)
-      RPT_VER="$2"
+    --gh-rel)
+      GH_REL="$2"
       shift
       shift
       ;;
-	--asl3-ver)
-      ASL3_VER="$2"
+	-r)
+      APTLY_REPO="asl3-$2"
       shift
-      shift
-	  ;;
-	--gh-rel)
-	  GH_REL="$2"
-	  shift
-	  shift
-	  ;;
-    -*|--*|*)
+      shift	
+      ;;
+	-*|--*|*)
       echo "Unknown option $1"
-      exit 1
+	  shift
+      shift
       ;;
   esac
 done
@@ -71,11 +49,6 @@ case $ARCH_ASK in
 		ARCH=$ARCH_ASK
 		;;
 esac
-
-if [ -z "$TARGETS" ]
-then
-  TARGETS="asl3-asterisk"
-fi
 
 if [ -z "$OPERATING_SYSTEMS" ]
 then
@@ -104,36 +77,35 @@ PDIR=$(dirname $DIR)
 echo "PDIR: ${PDIR}"
 ALL_PKG_ROOT=$(dirname ${PDIR})
 echo "ALL_PKG_ROOT: ${ALL_PKG_ROOT}"
+echo "GH_REL: ${GH_REL}"
 
-DPKG_BUILDOPTS="-b -uc -us"
-
-git config --system url.https://$GITHUB_TOKEN@github.com/.insteadOf https://github.com
-git config --system user.email "builder@allstarlink.org"
-cd $ALL_PKG_ROOT
-git clone https://github.com/AllStarLink/app_rpt
-git clone https://github.com/AllStarLink/ASL3 
-
-D_TAG="asl3-asterisk_builder.${OPERATING_SYSTEMS}.${ARCH}${REPO_ENV}"
+D_TAG="asl3-update-nodelist_builder.${OPERATING_SYSTEMS}.${ARCH}${REPO_ENV}"
 
 docker build -f $DIR/Dockerfile -t $D_TAG \
 	--build-arg ARCH="$ARCH" \
 	--build-arg OS="$OPERATING_SYSTEMS" \
-	--build-arg ASL_REPO="asl_builds${REPO_ENV}" \
 	--build-arg USER_ID=$(id -u) \
 	--build-arg GROUP_ID=$(id -g) \
 	$DIR
  
-docker run -v $ALL_PKG_ROOT:/build \
-	-e DPKG_BUILDOPTS="$DPKG_BUILDOPTS" \
-	-e BUILD_TARGETS="$TARGETS" \
-   	-e AST_VER="$AST_VER" \
-	-e RPT_VER="$RPT_VER" \
-	-e ASL3_VER="$ASL3_VER" \
- 	-e GH_TOKEN="$GH_TOKEN" \
-  	-e GITHUB_TOKEN="$GITHUB_TOKEN" \
-	$D_TAG
+docker run -v $ALL_PKG_ROOT:/build $D_TAG
 
 DEBIAN_FRONTEND=noninteractive apt-get -y install gh
-gh release upload -R AllStarLink/asl3-asterisk $GH_REL $ALL_PKG_ROOT/_debs/*.deb
+gh release upload -R AllStarLink/asl3-update-nodelist $GH_REL $ALL_PKG_ROOT/_debs/*.deb
 
 docker image rm --force $D_TAG
+
+APTLY_USER="${APTLY_API_USER}:${APTLY_API_PASS}"
+
+find $ALL_PKG_ROOT/_debs/*.deb -name "*.deb" | \
+	xargs -I {} -d '\n' curl --fail --user ${APTLY_USER} \
+	-X POST -F 'file=@"{}"' \
+	 https://repo-admin.allstarlink.org/api/files/${APTLY_REPO}-${OPERATING_SYSTEMS}
+
+curl --fail --user ${APTLY_USER} -X POST \
+	https://repo-admin.allstarlink.org/api/repos/${APTLY_REPO}/file/${APTLY_REPO}-${OPERATING_SYSTEMS}
+
+curl --fail --user ${APTLY_USER} -X PUT -H "content-Type: application/json" \
+	--data "{\"Signing\": {\"Batch\": true, \"Passphrase\": \"${APTLY_GPG_PASSPHRASE}\"}}" \
+	"https://repo-admin.allstarlink.org/api/publish/:./${OPERATING_SYSTEMS}"
+

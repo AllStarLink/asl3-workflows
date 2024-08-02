@@ -33,8 +33,8 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          ec2-image-id: ${{ inputs.arch == 'x86_64' && ${{ vars.EC2_AMI_AMD64 }} || inputs.arch == 'arm64' && ${{ vars.EC2_AMI_ARM64 }} || null }}
-          ec2-instance-type: ${{ inputs.arch == 'x86_64' && ${{ vars.EC2_BUILD_INST_TYPE_AMD64 }} || inputs.arch == 'arm64' && ${{ vars.EC2_BUILD_INST_TYPE_AMD64 }} || null }}
+          ec2-image-id: ${{ inputs.arch == 'x86_64' && vars.EC2_AMI_AMD64 || inputs.arch == 'arm64' && vars.EC2_AMI_ARM64  || null }}
+          ec2-instance-type: ${{ inputs.arch == 'x86_64' && vars.EC2_BUILD_INST_TYPE_AMD64 || inputs.arch == 'arm64' && vars.EC2_BUILD_INST_TYPE_AMD64 || null }}
           subnet-id: ${{ vars.EC2_SUBNET_ID }}
           security-group-id: ${{ vars.EC2_SECGRP_ID }}
   configure-runner:

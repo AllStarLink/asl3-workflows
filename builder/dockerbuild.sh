@@ -79,7 +79,7 @@ ALL_PKG_ROOT=$(dirname ${PDIR})
 echo "ALL_PKG_ROOT: ${ALL_PKG_ROOT}"
 echo "GH_REL: ${GH_REL}"
 
-D_TAG="asl3-update-nodelist_builder.${OPERATING_SYSTEMS}.${ARCH}${REPO_ENV}"
+D_TAG="CHANGEME_builder.${OPERATING_SYSTEMS}.${ARCH}${REPO_ENV}"
 
 docker build -f $DIR/Dockerfile -t $D_TAG \
 	--build-arg ARCH="$ARCH" \
@@ -91,7 +91,7 @@ docker build -f $DIR/Dockerfile -t $D_TAG \
 docker run -v $ALL_PKG_ROOT:/build $D_TAG
 
 DEBIAN_FRONTEND=noninteractive apt-get -y install gh
-gh release upload -R AllStarLink/asl3-update-nodelist $GH_REL $ALL_PKG_ROOT/_debs/*.deb
+gh release upload -R AllStarLink/CHANGEME $GH_REL $ALL_PKG_ROOT/_debs/*.deb
 
 docker image rm --force $D_TAG
 

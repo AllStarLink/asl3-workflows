@@ -51,7 +51,7 @@ jobs:
  #     - configure-runner
     runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
     steps: 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           persist-credentials: false
